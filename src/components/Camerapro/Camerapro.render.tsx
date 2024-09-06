@@ -7,7 +7,7 @@ import { AiOutlineCamera } from 'react-icons/ai';
 
 const Camerapro: FC<ICameraproProps> = ({  style, className, classNames = [] }) => {
   const { connect } = useRenderer();
-  const [image, setImage] = useState<string | null>(null); 
+  const [image, setImage] = useState<any>(); 
   const {
     sources: { datasource: ds },
   } = useSources();
@@ -18,7 +18,6 @@ const Camerapro: FC<ICameraproProps> = ({  style, className, classNames = [] }) 
 
     const listener = async () => {
       const v = await ds.getValue<string>();
-     
       setImage(v || null); 
     };
 
@@ -30,30 +29,37 @@ const Camerapro: FC<ICameraproProps> = ({  style, className, classNames = [] }) 
     };
   }, [ds]);
 
+  const base64ToBlob = (base64: string, contentType = '', sliceSize = 512) => {
+    const byteCharacters = atob(base64);
+    const byteArrays = [];
+
+    for (let offset = 0; offset < byteCharacters.length; offset += sliceSize) {
+      const slice = byteCharacters.slice(offset, offset + sliceSize);
+      const byteNumbers = new Array(slice.length);
+
+      for (let i = 0; i < slice.length; i++) {
+        byteNumbers[i] = slice.charCodeAt(i);
+      }
+
+      const byteArray = new Uint8Array(byteNumbers);
+      byteArrays.push(byteArray);
+    }
+
+    return new Blob(byteArrays, { type: contentType });
+  };
   const capturePhoto = async () => {
     if (cameraRef.current) {
       const capturedImage = cameraRef.current.takePhoto();
-      console.log('Captured Image:', capturedImage);
-    
-      const mimeType = capturedImage?.substring(0, capturedImage.indexOf(';')); 
-      console.log('MIME Type:', mimeType);
-  
-      setImage(capturedImage);
-  
-      if (ds) {
-        try {
-          await ds.setValue<any>(null, capturedImage);
-          console.log('Image saved to datasource');
-        } catch (error) {
-          console.error('Error updating datasource:', error);
-        }
-      }
-    }
-  };
-  
-console.log(ds)
+      const base64Data = capturedImage.split(',')[1];
+      const imageBlob = base64ToBlob(base64Data, 'image/jpeg');
+      const imageFile = new File([imageBlob], 'captured_photo.jpg', {
+        type: 'image/jpeg',
+      });
 
- 
+      await ds.setValue<any>(null, imageFile);
+    }
+    
+  };
 
 return (
   <div
@@ -77,7 +83,7 @@ return (
     >
       <AiOutlineCamera className="w-10 h-10 text-gray-600" /> 
     </button>
-    {image && <img src={image} alt="Captured" className="mt-4 w-32 h-auto" />} 
+    {image && <span>captured</span>} 
   </div>
 );
   
